@@ -58,3 +58,9 @@ Create a feature branch (git checkout -b feature-branch).
 Commit your changes (git commit -am 'Add new feature').
 Push to the branch (git push origin feature-branch).
 Create a new Pull Request.
+
+Team & Contact Info
+If you have any questions or feedback, feel free to reach out to any of the team members:
+
+Kristi Komini: kristi.komini@studenti.unicam.it
+
