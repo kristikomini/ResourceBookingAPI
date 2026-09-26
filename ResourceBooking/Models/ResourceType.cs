@@ -10,9 +10,8 @@ namespace ResourceBooking.Models
         public int ResourceTypeId { get; set; }
 
         [Required]
-        public string TypeName { get; set; }
+        public string TypeName { get; set; } = string.Empty;
 
-        public ICollection<Resource> Resources { get; set; }
-
+        public ICollection<Resource> Resources { get; set; } = new List<Resource>();
     }
 }

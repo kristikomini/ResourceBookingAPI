@@ -1,10 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ResourceBooking.Data;
-using ResourceBooking.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using ResourceBooking.Data;
+using ResourceBooking.Models;
 
 namespace ResourceBooking.Repositories
 {
@@ -30,11 +30,13 @@ namespace ResourceBooking.Repositories
             }
         }
 
-        public async Task<Resource> GetResourceByIdAsync(int resourceId)
+        public async Task<Resource?> GetResourceByIdAsync(int resourceId)
         {
             try
             {
-                return await _context.Resources.Include(r => r.ResourceType).FirstOrDefaultAsync(r => r.ResourceId == resourceId);
+                return await _context
+                    .Resources.Include(r => r.ResourceType)
+                    .FirstOrDefaultAsync(r => r.ResourceId == resourceId);
             }
             catch (Exception ex)
             {
@@ -98,7 +100,11 @@ namespace ResourceBooking.Repositories
             }
         }
 
-        public async Task<IEnumerable<Resource>> GetAvailableResourcesAsync(DateTime startDate, DateTime endDate, int? resourceId = null)
+        public async Task<IEnumerable<Resource>> GetAvailableResourcesAsync(
+            DateTime startDate,
+            DateTime endDate,
+            int? resourceId = null
+        )
         {
             try
             {
@@ -109,7 +115,11 @@ namespace ResourceBooking.Repositories
                     query = query.Where(r => r.ResourceId == resourceId);
                 }
 
-                return await query.Where(r => !r.Bookings.Any(b => b.StartDate < endDate && b.EndDate > startDate)).ToListAsync();
+                return await query
+                    .Where(r =>
+                        !r.Bookings.Any(b => b.StartDate < endDate && b.EndDate > startDate)
+                    )
+                    .ToListAsync();
             }
             catch (Exception ex)
             {

@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using ResourceBooking.Data;
 using ResourceBooking.Dtos;
 using ResourceBooking.Models;
 using ResourceBooking.Services;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ResourceBooking.Controllers
 {
@@ -40,10 +40,11 @@ namespace ResourceBooking.Controllers
             return Unauthorized("Invalid email or password.");
         }
 
-        private async Task<User> Authenticate(LoginDto userLogin)
+        private async Task<User?> Authenticate(LoginDto userLogin)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email.ToLower() == userLogin.Email.ToLower());
+            var user = await _context.Users.FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == userLogin.Email.ToLower()
+            );
 
             if (user != null && VerifyPassword(userLogin.Password, user.Password))
             {

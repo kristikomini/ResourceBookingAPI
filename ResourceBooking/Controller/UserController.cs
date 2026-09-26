@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Linq;
+using System.Threading.Tasks;
+using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using ResourceBooking.Dto;
 using ResourceBooking.Dtos;
 using ResourceBooking.Models;
 using ResourceBooking.Repositories;
 using ResourceBooking.Services;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using AutoMapper;
-using ResourceBooking.Dto;
 
 namespace ResourceBooking.Controllers
 {
@@ -20,7 +20,11 @@ namespace ResourceBooking.Controllers
         private readonly TokenService _tokenService;
         private readonly IMapper _mapper;
 
-        public UsersController(IUserRepository userRepository, TokenService tokenService, IMapper mapper)
+        public UsersController(
+            IUserRepository userRepository,
+            TokenService tokenService,
+            IMapper mapper
+        )
         {
             _userRepository = userRepository;
             _tokenService = tokenService;
@@ -67,14 +71,18 @@ namespace ResourceBooking.Controllers
                     Email = userForCreationDto.Email,
                     Name = userForCreationDto.Name,
                     LastName = userForCreationDto.LastName,
-                    Password = userForCreationDto.Password // Hashing will be handled by the repository
+                    Password = userForCreationDto.Password, // Hashing will be handled by the repository
                 };
 
                 var createdUser = await _userRepository.CreateUserAsync(user);
                 var token = _tokenService.GenerateToken(createdUser);
-                return CreatedAtAction(nameof(GetUserById), new { userId = createdUser.UserId }, new { createdUser, token });
+                return CreatedAtAction(
+                    nameof(GetUserById),
+                    new { userId = createdUser.UserId },
+                    new { createdUser, token }
+                );
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log exception
                 return StatusCode(500, "Internal server error");
@@ -130,7 +138,7 @@ namespace ResourceBooking.Controllers
 
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log exception
                 return StatusCode(500, "Internal server error");
@@ -152,7 +160,7 @@ namespace ResourceBooking.Controllers
                 await _userRepository.DeleteUserAsync(user);
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log exception
                 return StatusCode(500, "Internal server error");

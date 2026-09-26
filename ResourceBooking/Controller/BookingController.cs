@@ -1,12 +1,13 @@
-﻿using AutoMapper;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using ResourceBooking.Dtos;
+using ResourceBooking.Exceptions;
 using ResourceBooking.Interfaces;
 using ResourceBooking.Models;
 using Swashbuckle.AspNetCore.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace ResourceBooking.Controllers
 {
@@ -65,32 +66,25 @@ namespace ResourceBooking.Controllers
 
         [HttpPost]
         [SwaggerOperation(Summary = "Add Booking")]
-        public async Task<ActionResult<BookingDto>> AddBooking(BookingForCreationDto bookingForCreationDto)
+        public async Task<ActionResult<BookingDto>> AddBooking(BookingForCreationDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             try
             {
-                // Check if the resource is available during the specified time interval
-                var isBooked = await _bookingRepository.IsResourceBookedAsync(bookingForCreationDto.ResourceId, bookingForCreationDto.DataInizio, bookingForCreationDto.DataFine);
-
-                if (isBooked)
-                {
-                    return BadRequest("The resource is already booked during the specified time interval.");
-                }
-
-                var booking = _mapper.Map<Booking>(bookingForCreationDto);
-                var createdBooking = await _bookingRepository.CreateBookingAsync(booking);
-                var bookingDto = _mapper.Map<BookingDto>(createdBooking);
-
-                return CreatedAtAction(nameof(GetBooking), new { id = createdBooking.BookingId }, bookingDto);
+                var booking = _mapper.Map<Booking>(dto);
+                var created = await _bookingRepository.CreateBookingAsync(booking);
+                var bookingDto = _mapper.Map<BookingDto>(created);
+                return CreatedAtAction(
+                    nameof(GetBooking),
+                    new { id = created.BookingId },
+                    bookingDto
+                );
             }
-            catch (Exception ex)
+            catch (ResourceAlreadyBookedException ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                return Conflict(ex.Message); // 409 is the correct status for this
             }
         }
 
@@ -105,30 +99,21 @@ namespace ResourceBooking.Controllers
 
             try
             {
-                var existingBooking = await _bookingRepository.GetBookingByIdAsync(bookingForUpdateDto.BookingId);
+                var booking = _mapper.Map<Booking>(bookingForUpdateDto);
+                var updatedBooking = await _bookingRepository.UpdateBookingAsync(booking);
 
-                if (existingBooking == null)
+                if (updatedBooking == null)
                 {
                     return NotFound("Booking not found.");
                 }
 
-                // Check if the resource is available during the specified time interval for the update
-                var isBooked = await _bookingRepository.IsResourceBookedAsync(bookingForUpdateDto.ResourceId, bookingForUpdateDto.DataInizio, bookingForUpdateDto.DataFine);
-
-                if (isBooked && existingBooking.ResourceId != bookingForUpdateDto.ResourceId)
-                {
-                    return BadRequest("The resource is already booked during the specified time interval.");
-                }
-
-                var booking = _mapper.Map<Booking>(bookingForUpdateDto);
-                var updatedBooking = await _bookingRepository.UpdateBookingAsync(booking);
                 var bookingDto = _mapper.Map<BookingDto>(updatedBooking);
 
                 return Ok(bookingDto);
             }
-            catch (Exception ex)
+            catch (ResourceAlreadyBookedException ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                return Conflict(ex.Message); // 409 is the correct status for this
             }
         }
 
@@ -155,7 +140,9 @@ namespace ResourceBooking.Controllers
 
         [HttpGet("availability")]
         [SwaggerOperation(Summary = "Search Availability with Pagination")]
-        public async Task<ActionResult<PaginatedResult<ResourceDto>>> SearchAvailability([FromQuery] AvailabilitySearchDto searchDto)
+        public async Task<ActionResult<PaginatedResult<ResourceDto>>> SearchAvailability(
+            [FromQuery] AvailabilitySearchDto searchDto
+        )
         {
             try
             {
@@ -165,7 +152,13 @@ namespace ResourceBooking.Controllers
                     return BadRequest("DataInizio must be earlier than DataFine.");
                 }
 
-                var availableResources = await _bookingRepository.GetAvailableResourcesAsync(searchDto.DataInizio, searchDto.DataFine, searchDto.CodiceRisorsa, searchDto.Page, searchDto.PageSize);
+                var availableResources = await _bookingRepository.GetAvailableResourcesAsync(
+                    searchDto.DataInizio,
+                    searchDto.DataFine,
+                    searchDto.CodiceRisorsa,
+                    searchDto.Page,
+                    searchDto.PageSize
+                );
 
                 var resourceDtos = _mapper.Map<PaginatedResult<ResourceDto>>(availableResources);
 

@@ -1,14 +1,14 @@
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using ResourceBooking;
 using ResourceBooking.Data;
 using ResourceBooking.Helpers;
 using ResourceBooking.Interfaces;
 using ResourceBooking.Repositories;
 using ResourceBooking.Services;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using ResourceBooking;
 
 internal class Program
 {
@@ -19,7 +19,7 @@ internal class Program
         // Add services to the container.
         builder.Services.AddControllers(); //to handle HTTP request and return responses
         builder.Services.AddTransient<Seed>(); //to create a service that lives for the duration of a single HTTP request
-        builder.Services.AddSwaggerGen(c =>  //to generate Swagger documentation and the lamda expression is used to enable annotations
+        builder.Services.AddSwaggerGen(c => //to generate Swagger documentation and the lamda expression is used to enable annotations
         {
             c.EnableAnnotations();
         });
@@ -34,7 +34,7 @@ internal class Program
         builder.Services.AddSingleton<TokenService>(); //the same instance is shared throughout the applications lifetime
 
         // Register AutoMapper
-        builder.Services.AddAutoMapper(typeof(MappingProfiles)); //setting up mappings between different data transfer objects (DTOs) and models
+        builder.Services.AddAutoMapper(configuration => { }, typeof(MappingProfiles).Assembly); //setting up mappings between different data transfer objects (DTOs) and models
 
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer(); // Registers services to generate metadata for minimal APIs, aiding in the creation of API documentation.
@@ -43,7 +43,9 @@ internal class Program
         // Creating the DbContext to connect with the database
         builder.Services.AddDbContext<DataContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+            options.UseSqlServer(
+                builder.Configuration.GetConnectionString("DefaultConnection"),
+                sql => sql.EnableRetryOnFailure());
         });
 
         // Configure the JWT authentication
@@ -55,38 +57,37 @@ internal class Program
             throw new ArgumentException("JWT configuration settings are missing or invalid.");
         }
 
-        builder.Services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; //sets the default authentication scheme to JWT
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; //sets the default challenge scheme to JWT
-            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme; //sets the default authentication scheme to JWT
-        })
-        .AddJwtBearer(options =>
-        {
-            options.TokenValidationParameters = new TokenValidationParameters
+        builder
+            .Services.AddAuthentication(options =>
             {
-                ValidateIssuer = true, //ensures that the token was issued by a trusted authorization server
-                ValidateAudience = true, // audience is valid  
-                ValidateLifetime = true, // checks if the token is expired
-                ValidateIssuerSigningKey = true, // checks if the signing key is valid
-                ValidIssuer = jwtIssuer, // sets the issuer
-                ValidAudience = jwtIssuer, // sets the audience
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)) // sets the key for validating the tokens signature
-            };
-        });
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme; //sets the default authentication scheme to JWT
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; //sets the default challenge scheme to JWT
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme; //sets the default authentication scheme to JWT
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true, //ensures that the token was issued by a trusted authorization server
+                    ValidateAudience = true, // audience is valid
+                    ValidateLifetime = true, // checks if the token is expired
+                    ValidateIssuerSigningKey = true, // checks if the signing key is valid
+                    ValidIssuer = jwtIssuer, // sets the issuer
+                    ValidAudience = jwtIssuer, // sets the audience
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)), // sets the key for validating the tokens signature
+                };
+            });
 
         builder.Services.AddAuthorization(); //adds authorization services to the specified IServiceCollection
 
-        var app = builder.Build(); //creates an instace of the WebApplication class 
+        var app = builder.Build(); //creates an instace of the WebApplication class
 
-       
         // Seed the database if the argument is provided
         if (args.Length == 1 && args[0].ToLower() == "seeddata")
         {
             SeedData(app);
         }
 
-       
         // Seed the database.
         void SeedData(IHost app)
         {
@@ -97,7 +98,6 @@ internal class Program
             }
         }
 
-       
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment()) //checks if the application is running in the development environment
         {

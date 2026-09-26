@@ -1,13 +1,13 @@
-﻿using AutoMapper;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using ResourceBooking.Dto;
 using ResourceBooking.Dtos;
 using ResourceBooking.Models;
 using ResourceBooking.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace ResourceBooking.Controllers
 {
@@ -59,7 +59,7 @@ namespace ResourceBooking.Controllers
                 {
                     ResourceId = resource.ResourceId,
                     Name = resource.Name,
-                    ResourceTypeName = resource.ResourceType.TypeName
+                    ResourceTypeName = resource.ResourceType.TypeName,
                 };
 
                 return Ok(resourceDto);
@@ -73,7 +73,9 @@ namespace ResourceBooking.Controllers
 
         [HttpPost]
         [SwaggerOperation(Summary = "Add Resource")]
-        public async Task<ActionResult<ResourceDto>> AddResource(ResourceForCreationDto resourceForCreationDto)
+        public async Task<ActionResult<ResourceDto>> AddResource(
+            ResourceForCreationDto resourceForCreationDto
+        )
         {
             if (!ModelState.IsValid)
             {
@@ -85,7 +87,7 @@ namespace ResourceBooking.Controllers
                 var resource = new Resource
                 {
                     Name = resourceForCreationDto.Name,
-                    ResourceTypeId = resourceForCreationDto.ResourceTypeId
+                    ResourceTypeId = resourceForCreationDto.ResourceTypeId,
                 };
 
                 var createdResource = await _resourceRepository.CreateResourceAsync(resource);
@@ -94,10 +96,14 @@ namespace ResourceBooking.Controllers
                 {
                     ResourceId = createdResource.ResourceId,
                     Name = createdResource.Name,
-                    ResourceTypeName = createdResource.ResourceType?.TypeName // Use null-conditional operator
+                    ResourceTypeName = createdResource.ResourceType?.TypeName ?? string.Empty,
                 };
 
-                return CreatedAtAction(nameof(GetResource), new { id = createdResource.ResourceId }, resourceDto);
+                return CreatedAtAction(
+                    nameof(GetResource),
+                    new { id = createdResource.ResourceId },
+                    resourceDto
+                );
             }
             catch (Exception ex)
             {
@@ -108,7 +114,9 @@ namespace ResourceBooking.Controllers
 
         [HttpPut]
         [SwaggerOperation(Summary = "Update Resource")]
-        public async Task<ActionResult<ResourceDto>> UpdateResource(ResourceForUpdateDto resourceForUpdateDto)
+        public async Task<ActionResult<ResourceDto>> UpdateResource(
+            ResourceForUpdateDto resourceForUpdateDto
+        )
         {
             if (!ModelState.IsValid)
             {
@@ -117,7 +125,9 @@ namespace ResourceBooking.Controllers
 
             try
             {
-                var resource = await _resourceRepository.GetResourceByIdAsync(resourceForUpdateDto.ResourceId);
+                var resource = await _resourceRepository.GetResourceByIdAsync(
+                    resourceForUpdateDto.ResourceId
+                );
 
                 if (resource == null)
                 {
@@ -133,7 +143,7 @@ namespace ResourceBooking.Controllers
                 {
                     ResourceId = updatedResource.ResourceId,
                     Name = updatedResource.Name,
-                    ResourceTypeName = updatedResource.ResourceType.TypeName
+                    ResourceTypeName = updatedResource.ResourceType.TypeName,
                 };
 
                 return Ok(resourceDto);

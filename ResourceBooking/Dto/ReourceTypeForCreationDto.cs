@@ -2,6 +2,6 @@
 {
     public class ResourceTypeForCreationDto
     {
-        public string TypeName { get; set; }
+        public string TypeName { get; set; } = string.Empty;
     }
 }
