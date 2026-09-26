@@ -21,12 +21,11 @@ namespace ResourceBooking.Models
         [Required]
         public DateTime EndDate { get; set; }
 
-        //Navigation properties one - to - many 
+        //Navigation properties one - to - many
         [ForeignKey("ResourceId")]
-        public Resource Resource { get; set; }
+        public Resource Resource { get; set; } = null!;
 
         [ForeignKey("UserId")]
-        public User User { get; set; }
-
+        public User User { get; set; } = null!;
     }
 }

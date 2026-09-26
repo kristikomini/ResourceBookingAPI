@@ -1,4 +1,8 @@
-﻿using AutoMapper;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using ResourceBooking.Dto;
 using ResourceBooking.Dtos;
@@ -6,10 +10,6 @@ using ResourceBooking.Interfaces;
 using ResourceBooking.Models;
 using ResourceBooking.Repositories;
 using Swashbuckle.AspNetCore.Annotations;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace ResourceBooking.Controllers
 {
@@ -18,7 +18,6 @@ namespace ResourceBooking.Controllers
     public class ResourceTypeController : ControllerBase
     {
         private readonly IResourceTypeRepository _resourceTypeRepository;
-        private readonly IMapper _mapper;
 
         public ResourceTypeController(IResourceTypeRepository resourceTypeRepository)
         {
@@ -32,11 +31,13 @@ namespace ResourceBooking.Controllers
             try
             {
                 var resourceTypes = await _resourceTypeRepository.GetResourceTypesAsync();
-                var resourceTypeDtos = resourceTypes.Select(rt => new ResourceTypeDto
-                {
-                    ResourceTypeId = rt.ResourceTypeId,
-                    TypeName = rt.TypeName
-                }).ToList();
+                var resourceTypeDtos = resourceTypes
+                    .Select(rt => new ResourceTypeDto
+                    {
+                        ResourceTypeId = rt.ResourceTypeId,
+                        TypeName = rt.TypeName,
+                    })
+                    .ToList();
 
                 return Ok(resourceTypeDtos);
             }
@@ -63,7 +64,7 @@ namespace ResourceBooking.Controllers
                 var resourceTypeDto = new ResourceTypeDto
                 {
                     ResourceTypeId = resourceType.ResourceTypeId,
-                    TypeName = resourceType.TypeName
+                    TypeName = resourceType.TypeName,
                 };
 
                 return Ok(resourceTypeDto);
@@ -77,7 +78,9 @@ namespace ResourceBooking.Controllers
 
         [HttpPost]
         [SwaggerOperation(Summary = "Add Resource Type")]
-        public async Task<ActionResult<ResourceTypeDto>> AddResourceType(ResourceTypeForCreationDto resourceTypeForCreationDto)
+        public async Task<ActionResult<ResourceTypeDto>> AddResourceType(
+            ResourceTypeForCreationDto resourceTypeForCreationDto
+        )
         {
             if (!ModelState.IsValid)
             {
@@ -88,18 +91,24 @@ namespace ResourceBooking.Controllers
             {
                 var resourceType = new ResourceType
                 {
-                    TypeName = resourceTypeForCreationDto.TypeName
+                    TypeName = resourceTypeForCreationDto.TypeName,
                 };
 
-                var createdResourceType = await _resourceTypeRepository.CreateResourceTypeAsync(resourceType);
+                var createdResourceType = await _resourceTypeRepository.CreateResourceTypeAsync(
+                    resourceType
+                );
 
                 var resourceTypeDto = new ResourceTypeDto
                 {
                     ResourceTypeId = createdResourceType.ResourceTypeId,
-                    TypeName = createdResourceType.TypeName
+                    TypeName = createdResourceType.TypeName,
                 };
 
-                return CreatedAtAction(nameof(GetResourceType), new { id = createdResourceType.ResourceTypeId }, resourceTypeDto);
+                return CreatedAtAction(
+                    nameof(GetResourceType),
+                    new { id = createdResourceType.ResourceTypeId },
+                    resourceTypeDto
+                );
             }
             catch (Exception ex)
             {
@@ -110,7 +119,9 @@ namespace ResourceBooking.Controllers
 
         [HttpPut]
         [SwaggerOperation(Summary = "Update Resource Type")]
-        public async Task<ActionResult<ResourceTypeDto>> UpdateResourceType(ResourceTypeForUpdateDto resourceTypeForUpdateDto)
+        public async Task<ActionResult<ResourceTypeDto>> UpdateResourceType(
+            ResourceTypeForUpdateDto resourceTypeForUpdateDto
+        )
         {
             if (!ModelState.IsValid)
             {
@@ -119,7 +130,9 @@ namespace ResourceBooking.Controllers
 
             try
             {
-                var resourceType = await _resourceTypeRepository.GetResourceTypeByIdAsync(resourceTypeForUpdateDto.ResourceTypeId);
+                var resourceType = await _resourceTypeRepository.GetResourceTypeByIdAsync(
+                    resourceTypeForUpdateDto.ResourceTypeId
+                );
 
                 if (resourceType == null)
                 {
@@ -128,12 +141,14 @@ namespace ResourceBooking.Controllers
 
                 resourceType.TypeName = resourceTypeForUpdateDto.TypeName;
 
-                var updatedResourceType = await _resourceTypeRepository.UpdateResourceTypeAsync(resourceType);
+                var updatedResourceType = await _resourceTypeRepository.UpdateResourceTypeAsync(
+                    resourceType
+                );
 
                 var resourceTypeDto = new ResourceTypeDto
                 {
                     ResourceTypeId = updatedResourceType.ResourceTypeId,
-                    TypeName = updatedResourceType.TypeName
+                    TypeName = updatedResourceType.TypeName,
                 };
 
                 return Ok(resourceTypeDto);

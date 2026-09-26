@@ -1,11 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ResourceBooking.Data;
-using ResourceBooking.Models;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using ResourceBooking.Data;
+using ResourceBooking.Models;
 
 public class UserRepository : IUserRepository
 {
@@ -20,8 +20,8 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            return await _context.Users
-                .Include(u => u.Bookings) // Include the related bookings
+            return await _context
+                .Users.Include(u => u.Bookings) // Include the related bookings
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -31,12 +31,12 @@ public class UserRepository : IUserRepository
         }
     }
 
-    public async Task<User> GetUserByIdAsync(int userId)
+    public async Task<User?> GetUserByIdAsync(int userId)
     {
         try
         {
-            return await _context.Users
-                .Include(u => u.Bookings) // Include the related bookings
+            return await _context
+                .Users.Include(u => u.Bookings) // Include the related bookings
                 .FirstOrDefaultAsync(u => u.UserId == userId);
         }
         catch (Exception ex)
@@ -63,7 +63,7 @@ public class UserRepository : IUserRepository
         }
     }
 
-    public async Task<User> AuthenticateUserAsync(string email, string password)
+    public async Task<User?> AuthenticateUserAsync(string email, string password)
     {
         try
         {

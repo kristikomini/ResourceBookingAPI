@@ -1,10 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using ResourceBooking.Data;
 using ResourceBooking.Interfaces;
 using ResourceBooking.Models;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace ResourceBooking.Repositories
 {
@@ -30,7 +30,7 @@ namespace ResourceBooking.Repositories
             }
         }
 
-        public async Task<ResourceType> GetResourceTypeByIdAsync(int resourceTypeId)
+        public async Task<ResourceType?> GetResourceTypeByIdAsync(int resourceTypeId)
         {
             try
             {

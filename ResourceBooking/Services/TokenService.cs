@@ -1,10 +1,10 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using ResourceBooking.Models;
-using System;
+﻿using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using ResourceBooking.Models;
 
 namespace ResourceBooking.Services
 {
@@ -23,7 +23,7 @@ namespace ResourceBooking.Services
             var key = _config["Jwt:Key"];
             var issuer = _config["Jwt:Issuer"];
             var expiryMinutes = _config.GetValue<int>("Jwt:ExpiryMinutes", 120);
-            
+
             //Throw exception if the key or issuer is missing
             if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(issuer))
             {
@@ -34,12 +34,12 @@ namespace ResourceBooking.Services
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            //Defines the claims to be included in the JWT token, such as the user's ID, email, and name. 
+            //Defines the claims to be included in the JWT token, such as the user's ID, email, and name.
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.Name)
+                new Claim(ClaimTypes.Name, user.Name),
             };
 
             //Creates a JwtSecurityToken object using the issuer, claims, expiration time, and signing credentials.
@@ -48,7 +48,8 @@ namespace ResourceBooking.Services
                 issuer,
                 claims,
                 expires: DateTime.Now.AddMinutes(expiryMinutes),
-                signingCredentials: credentials);
+                signingCredentials: credentials
+            );
 
             // Converts the JwtSecurityToken object into a string representation of the token and returns it.
             return new JwtSecurityTokenHandler().WriteToken(token);

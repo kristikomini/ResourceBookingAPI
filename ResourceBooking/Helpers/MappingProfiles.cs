@@ -14,8 +14,14 @@ namespace ResourceBooking.Helpers
             CreateMap<UserForUpdateDto, User>().ReverseMap();
 
             CreateMap<Resource, ResourceDto>()
-                .ForMember(dest => dest.ResourceTypeName, opt => opt.MapFrom(src => src.ResourceType.TypeName))
-                .ForMember(dest => dest.ResourceTypeId, opt => opt.MapFrom(src => src.ResourceTypeId))
+                .ForMember(
+                    dest => dest.ResourceTypeName,
+                    opt => opt.MapFrom(src => src.ResourceType.TypeName)
+                )
+                .ForMember(
+                    dest => dest.ResourceTypeId,
+                    opt => opt.MapFrom(src => src.ResourceTypeId)
+                )
                 .ReverseMap();
 
             CreateMap<ResourceForCreationDto, Resource>();
