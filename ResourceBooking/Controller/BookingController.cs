@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ResourceBooking.Dtos;
 using ResourceBooking.Exceptions;
@@ -11,6 +9,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace ResourceBooking.Controllers
 {
+    [Authorize]
     [Route("api/bookings")]
     [ApiController]
     public class BookingController : ControllerBase
@@ -28,40 +27,26 @@ namespace ResourceBooking.Controllers
         [SwaggerOperation(Summary = "List of Bookings")]
         public async Task<ActionResult<IEnumerable<BookingDto>>> GetBookings()
         {
-            try
-            {
-                var bookings = await _bookingRepository.GetBookingsAsync();
-                var bookingDtos = _mapper.Map<List<BookingDto>>(bookings);
+            var bookings = await _bookingRepository.GetBookingsAsync();
+            var bookingDtos = _mapper.Map<List<BookingDto>>(bookings);
 
-                return Ok(bookingDtos);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            return Ok(bookingDtos);
         }
 
         [HttpGet("{id}")]
         [SwaggerOperation(Summary = "Get Booking by ID")]
         public async Task<ActionResult<BookingDto>> GetBooking(int id)
         {
-            try
+            var booking = await _bookingRepository.GetBookingByIdAsync(id);
+
+            if (booking == null)
             {
-                var booking = await _bookingRepository.GetBookingByIdAsync(id);
-
-                if (booking == null)
-                {
-                    return NotFound("Booking not found.");
-                }
-
-                var bookingDto = _mapper.Map<BookingDto>(booking);
-
-                return Ok(bookingDto);
+                return NotFound("Booking not found.");
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+
+            var bookingDto = _mapper.Map<BookingDto>(booking);
+
+            return Ok(bookingDto);
         }
 
         [HttpPost]
@@ -70,6 +55,11 @@ namespace ResourceBooking.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            if (dto.DataInizio >= dto.DataFine)
+            {
+                return BadRequest("DataInizio must be earlier than DataFine.");
+            }
 
             try
             {
@@ -97,6 +87,11 @@ namespace ResourceBooking.Controllers
                 return BadRequest(ModelState);
             }
 
+            if (bookingForUpdateDto.DataInizio >= bookingForUpdateDto.DataFine)
+            {
+                return BadRequest("DataInizio must be earlier than DataFine.");
+            }
+
             try
             {
                 var booking = _mapper.Map<Booking>(bookingForUpdateDto);
@@ -121,21 +116,14 @@ namespace ResourceBooking.Controllers
         [SwaggerOperation(Summary = "Delete Booking")]
         public async Task<IActionResult> DeleteBooking(int id)
         {
-            try
-            {
-                var success = await _bookingRepository.DeleteBookingAsync(id);
+            var success = await _bookingRepository.DeleteBookingAsync(id);
 
-                if (!success)
-                {
-                    return NotFound("Booking not found.");
-                }
-
-                return NoContent();
-            }
-            catch (Exception ex)
+            if (!success)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                return NotFound("Booking not found.");
             }
+
+            return NoContent();
         }
 
         [HttpGet("availability")]
@@ -144,30 +132,23 @@ namespace ResourceBooking.Controllers
             [FromQuery] AvailabilitySearchDto searchDto
         )
         {
-            try
+            // Validate date range
+            if (searchDto.DataInizio >= searchDto.DataFine)
             {
-                // Validate date range
-                if (searchDto.DataInizio >= searchDto.DataFine)
-                {
-                    return BadRequest("DataInizio must be earlier than DataFine.");
-                }
-
-                var availableResources = await _bookingRepository.GetAvailableResourcesAsync(
-                    searchDto.DataInizio,
-                    searchDto.DataFine,
-                    searchDto.CodiceRisorsa,
-                    searchDto.Page,
-                    searchDto.PageSize
-                );
-
-                var resourceDtos = _mapper.Map<PaginatedResult<ResourceDto>>(availableResources);
-
-                return Ok(resourceDtos);
+                return BadRequest("DataInizio must be earlier than DataFine.");
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+
+            var availableResources = await _bookingRepository.GetAvailableResourcesAsync(
+                searchDto.DataInizio,
+                searchDto.DataFine,
+                searchDto.CodiceRisorsa,
+                searchDto.Page,
+                searchDto.PageSize
+            );
+
+            var resourceDtos = _mapper.Map<PaginatedResult<ResourceDto>>(availableResources);
+
+            return Ok(resourceDtos);
         }
     }
 }

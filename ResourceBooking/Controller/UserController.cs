@@ -1,17 +1,14 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ResourceBooking.Dto;
 using ResourceBooking.Dtos;
 using ResourceBooking.Models;
-using ResourceBooking.Repositories;
 using ResourceBooking.Services;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ResourceBooking.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
@@ -35,81 +32,65 @@ namespace ResourceBooking.Controllers
         [SwaggerOperation(Summary = "Get all Users")]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetAllUsers()
         {
-            try
-            {
-                var users = await _userRepository.GetUsersAsync();
-                var userDtos = _mapper.Map<List<UserDto>>(users);
+            var users = await _userRepository.GetUsersAsync();
+            var userDtos = _mapper.Map<List<UserDto>>(users);
 
-                return Ok(userDtos);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            return Ok(userDtos);
         }
 
         [AllowAnonymous]
         [HttpPost]
-        [SwaggerOperation(Summary = "Add new User")]
-        public async Task<ActionResult<User>> CreateUser(UserForCreationDto userForCreationDto)
+        [SwaggerOperation(Summary = "Register a new User")]
+        public async Task<ActionResult<UserDto>> CreateUser(UserForCreationDto userForCreationDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            try
+            var existingUsers = await _userRepository.GetUsersAsync();
+            if (
+                existingUsers.Any(u =>
+                    string.Equals(u.Email, userForCreationDto.Email, StringComparison.OrdinalIgnoreCase)
+                )
+            )
             {
-                var existingUser = await _userRepository.GetUsersAsync();
-                if (existingUser.Any(u => u.Email == userForCreationDto.Email))
-                {
-                    return Conflict("Email already exists.");
-                }
-
-                var user = new User
-                {
-                    Email = userForCreationDto.Email,
-                    Name = userForCreationDto.Name,
-                    LastName = userForCreationDto.LastName,
-                    Password = userForCreationDto.Password, // Hashing will be handled by the repository
-                };
-
-                var createdUser = await _userRepository.CreateUserAsync(user);
-                var token = _tokenService.GenerateToken(createdUser);
-                return CreatedAtAction(
-                    nameof(GetUserById),
-                    new { userId = createdUser.UserId },
-                    new { createdUser, token }
-                );
+                return Conflict("Email already exists.");
             }
-            catch (Exception)
+
+            var user = new User
             {
-                // Log exception
-                return StatusCode(500, "Internal server error");
-            }
+                Email = userForCreationDto.Email,
+                Name = userForCreationDto.Name,
+                LastName = userForCreationDto.LastName,
+                Password = userForCreationDto.Password, // Hashing is handled by the repository.
+            };
+
+            var createdUser = await _userRepository.CreateUserAsync(user);
+            var token = _tokenService.GenerateToken(createdUser);
+            var userDto = _mapper.Map<UserDto>(createdUser);
+
+            return CreatedAtAction(
+                nameof(GetUserById),
+                new { userId = createdUser.UserId },
+                new { user = userDto, token }
+            );
         }
 
         [HttpGet("{userId}")]
         [SwaggerOperation(Summary = "Get User by Id")]
         public async Task<ActionResult<UserDto>> GetUserById(int userId)
         {
-            try
+            var user = await _userRepository.GetUserByIdAsync(userId);
+
+            if (user == null)
             {
-                var user = await _userRepository.GetUserByIdAsync(userId);
-
-                if (user == null)
-                {
-                    return NotFound();
-                }
-
-                var userDto = _mapper.Map<UserDto>(user);
-
-                return Ok(userDto);
+                return NotFound();
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+
+            var userDto = _mapper.Map<UserDto>(user);
+
+            return Ok(userDto);
         }
 
         [HttpPut("{userId}")]
@@ -121,50 +102,34 @@ namespace ResourceBooking.Controllers
                 return BadRequest("User ID mismatch");
             }
 
-            try
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
             {
-                var user = await _userRepository.GetUserByIdAsync(userId);
-                if (user == null)
-                {
-                    return NotFound();
-                }
-
-                user.Email = userForUpdateDto.Email;
-                user.Name = userForUpdateDto.Name;
-                user.LastName = userForUpdateDto.LastName;
-                user.Password = userForUpdateDto.Password; // Hashing will be handled by the repository
-
-                await _userRepository.UpdateUserAsync(user);
-
-                return NoContent();
+                return NotFound();
             }
-            catch (Exception)
-            {
-                // Log exception
-                return StatusCode(500, "Internal server error");
-            }
+
+            user.Email = userForUpdateDto.Email;
+            user.Name = userForUpdateDto.Name;
+            user.LastName = userForUpdateDto.LastName;
+            user.Password = userForUpdateDto.Password; // Hashing is handled by the repository.
+
+            await _userRepository.UpdateUserAsync(user);
+
+            return NoContent();
         }
 
         [HttpDelete("{userId}")]
         [SwaggerOperation(Summary = "Delete User by Id")]
         public async Task<IActionResult> DeleteUser(int userId)
         {
-            try
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
             {
-                var user = await _userRepository.GetUserByIdAsync(userId);
-                if (user == null)
-                {
-                    return NotFound();
-                }
+                return NotFound();
+            }
 
-                await _userRepository.DeleteUserAsync(user);
-                return NoContent();
-            }
-            catch (Exception)
-            {
-                // Log exception
-                return StatusCode(500, "Internal server error");
-            }
+            await _userRepository.DeleteUserAsync(user);
+            return NoContent();
         }
     }
 }
