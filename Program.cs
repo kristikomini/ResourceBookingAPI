@@ -80,6 +80,20 @@ internal class Program
 
         builder.Services.AddAuthorization(); //adds authorization services to the specified IServiceCollection
 
+        // Allow the React dev server (Vite) to call the API from the browser.
+        const string FrontendCors = "FrontendCors";
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy(
+                FrontendCors,
+                policy =>
+                    policy
+                        .WithOrigins("http://localhost:5173", "http://localhost:3000")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+            );
+        });
+
         var app = builder.Build(); //creates an instace of the WebApplication class
 
         // Seed the database if the argument is provided
@@ -106,6 +120,8 @@ internal class Program
         }
 
         app.UseHttpsRedirection(); //encryts the data sent between the client and the server
+
+        app.UseCors(FrontendCors); // must run before authentication so preflight requests succeed
 
         app.UseAuthentication(); // authenticates the users based on the authentication scheme
         app.UseAuthorization(); // checks if the users have the necessary permissions to access the resources

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ResourceBooking", "ResourceBooking\ResourceBooking.csproj", "{5AE7C8F3-1BAD-4D26-A2BD-34D282318FC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ResourceBooking", "ResourceBooking.csproj", "{5AE7C8F3-1BAD-4D26-A2BD-34D282318FC4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
