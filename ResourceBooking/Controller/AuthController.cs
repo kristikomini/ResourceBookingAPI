@@ -1,13 +1,8 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using ResourceBooking.Data;
 using ResourceBooking.Dtos;
-using ResourceBooking.Models;
 using ResourceBooking.Services;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace ResourceBooking.Controllers
 {
@@ -15,59 +10,37 @@ namespace ResourceBooking.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly DataContext _context;
-        private readonly IConfiguration _config;
+        private readonly IUserRepository _userRepository;
         private readonly TokenService _tokenService;
 
-        public AuthController(DataContext context, IConfiguration config, TokenService tokenService)
+        public AuthController(IUserRepository userRepository, TokenService tokenService)
         {
-            _context = context;
-            _config = config;
+            _userRepository = userRepository;
             _tokenService = tokenService;
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
+        [SwaggerOperation(Summary = "Authenticate a user and return a JWT")]
         public async Task<IActionResult> Login([FromBody] LoginDto userLogin)
         {
-            var user = await Authenticate(userLogin);
-
-            if (user != null)
+            if (!ModelState.IsValid)
             {
-                var token = _tokenService.GenerateToken(user);
-                return Ok(new { token });
+                return BadRequest(ModelState);
             }
 
-            return Unauthorized("Invalid email or password.");
-        }
-
-        private async Task<User?> Authenticate(LoginDto userLogin)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u =>
-                u.Email.ToLower() == userLogin.Email.ToLower()
+            var user = await _userRepository.AuthenticateUserAsync(
+                userLogin.Email,
+                userLogin.Password
             );
 
-            if (user != null && VerifyPassword(userLogin.Password, user.Password))
+            if (user is null)
             {
-                return user;
+                return Unauthorized("Invalid email or password.");
             }
 
-            return null;
-        }
-
-        private string HashPassword(string password)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var bytes = Encoding.UTF8.GetBytes(password);
-                var hash = sha256.ComputeHash(bytes);
-                return Convert.ToBase64String(hash);
-            }
-        }
-
-        private bool VerifyPassword(string enteredPassword, string storedHash)
-        {
-            var enteredHash = HashPassword(enteredPassword);
-            return enteredHash == storedHash;
+            var token = _tokenService.GenerateToken(user);
+            return Ok(new { token });
         }
     }
 }

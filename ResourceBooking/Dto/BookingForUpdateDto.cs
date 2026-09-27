@@ -1,4 +1,4 @@
-﻿namespace ResourceBooking.Dto
+﻿namespace ResourceBooking.Dtos
 {
     public class BookingForUpdateDto
     {

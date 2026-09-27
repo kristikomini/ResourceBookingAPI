@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ResourceBooking.Data;
 using ResourceBooking.Models;
@@ -10,120 +6,75 @@ using ResourceBooking.Models;
 public class UserRepository : IUserRepository
 {
     private readonly DataContext _context;
+    private readonly IPasswordHasher<User> _passwordHasher;
 
-    public UserRepository(DataContext context)
+    public UserRepository(DataContext context, IPasswordHasher<User> passwordHasher)
     {
         _context = context;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<IEnumerable<User>> GetUsersAsync()
     {
-        try
-        {
-            return await _context
-                .Users.Include(u => u.Bookings) // Include the related bookings
-                .ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            // Log exception
-            throw new Exception("Error fetching users.", ex);
-        }
+        return await _context
+            .Users.Include(u => u.Bookings) // Include the related bookings
+            .ToListAsync();
     }
 
     public async Task<User?> GetUserByIdAsync(int userId)
     {
-        try
-        {
-            return await _context
-                .Users.Include(u => u.Bookings) // Include the related bookings
-                .FirstOrDefaultAsync(u => u.UserId == userId);
-        }
-        catch (Exception ex)
-        {
-            // Log exception
-            throw new Exception("Error fetching user by ID.", ex);
-        }
+        return await _context
+            .Users.Include(u => u.Bookings) // Include the related bookings
+            .FirstOrDefaultAsync(u => u.UserId == userId);
     }
 
     public async Task<User> CreateUserAsync(User user)
     {
-        try
-        {
-            // Hash the password before saving
-            user.Password = HashPassword(user.Password);
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return user;
-        }
-        catch (Exception ex)
-        {
-            // Log exception
-            throw new Exception("Error creating user.", ex);
-        }
+        // Hash the (plain-text) password before saving.
+        user.Password = _passwordHasher.HashPassword(user, user.Password);
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        return user;
     }
 
     public async Task<User?> AuthenticateUserAsync(string email, string password)
     {
-        try
+        var user = await _context.Users.FirstOrDefaultAsync(u =>
+            u.Email.ToLower() == email.ToLower()
+        );
+
+        if (user is null)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-            if (user != null && VerifyPassword(password, user.Password))
-            {
-                return user;
-            }
             return null;
         }
-        catch (Exception ex)
+
+        var result = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
+        if (result == PasswordVerificationResult.Failed)
         {
-            // Log exception
-            throw new Exception("Error authenticating user.", ex);
+            return null;
         }
+
+        // Transparently upgrade the stored hash if the hashing parameters have changed.
+        if (result == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            user.Password = _passwordHasher.HashPassword(user, password);
+            await _context.SaveChangesAsync();
+        }
+
+        return user;
     }
 
     public async Task UpdateUserAsync(User user)
     {
-        try
-        {
-            // Hash the password before saving
-            user.Password = HashPassword(user.Password);
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            // Log exception
-            throw new Exception("Error updating user.", ex);
-        }
+        // Re-hash the incoming (plain-text) password before saving.
+        user.Password = _passwordHasher.HashPassword(user, user.Password);
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
     }
 
     public async Task DeleteUserAsync(User user)
     {
-        try
-        {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            // Log exception
-            throw new Exception("Error deleting user.", ex);
-        }
-    }
-
-    private string HashPassword(string password)
-    {
-        using (var sha256 = SHA256.Create())
-        {
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = sha256.ComputeHash(bytes);
-            return Convert.ToBase64String(hash);
-        }
-    }
-
-    private bool VerifyPassword(string enteredPassword, string storedHash)
-    {
-        var enteredHash = HashPassword(enteredPassword);
-        return enteredHash == storedHash;
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
     }
 }

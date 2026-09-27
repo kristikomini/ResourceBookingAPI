@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using ResourceBooking.Data;
 using ResourceBooking.Models;
 
@@ -13,12 +8,12 @@ namespace ResourceBooking
     public class Seed
     {
         private readonly DataContext _context;
-        private readonly IConfiguration _config;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public Seed(DataContext context, IConfiguration config)
+        public Seed(DataContext context, IPasswordHasher<User> passwordHasher)
         {
             _context = context;
-            _config = config;
+            _passwordHasher = passwordHasher;
         }
 
         // Seeds the database with initial data if there are no existing data
@@ -45,16 +40,18 @@ namespace ResourceBooking
                                 Email = "john.doe@example.com",
                                 Name = "John",
                                 LastName = "Doe",
-                                Password = HashPassword("password123"),
                             },
                             new User
                             {
                                 Email = "jane.doe@example.com",
                                 Name = "Jane",
                                 LastName = "Doe",
-                                Password = HashPassword("password123"),
                             },
                         };
+                        foreach (var user in users)
+                        {
+                            user.Password = _passwordHasher.HashPassword(user, "password123");
+                        }
                         _context.Users.AddRange(users);
                         _context.SaveChanges();
 
@@ -114,16 +111,6 @@ namespace ResourceBooking
                     transaction.Rollback();
                     throw;
                 }
-            }
-        }
-
-        private string HashPassword(string password)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var bytes = Encoding.UTF8.GetBytes(password);
-                var hash = sha256.ComputeHash(bytes);
-                return Convert.ToBase64String(hash);
             }
         }
     }
