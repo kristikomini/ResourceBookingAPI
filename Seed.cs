@@ -24,6 +24,11 @@ namespace ResourceBooking
         // Seeds the database with initial data if there are no existing data
         public void SeedDataContext()
         {
+            // EnableRetryOnFailure uses a retrying execution strategy, which forbids
+            // user-initiated transactions unless they run inside the strategy itself.
+            var strategy = _context.Database.CreateExecutionStrategy();
+            strategy.Execute(() =>
+            {
             using (var transaction = _context.Database.BeginTransaction())
             {
                 try
@@ -115,6 +120,7 @@ namespace ResourceBooking
                     throw;
                 }
             }
+            });
         }
 
         private string HashPassword(string password)
